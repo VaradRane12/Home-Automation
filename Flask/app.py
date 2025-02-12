@@ -16,7 +16,7 @@ MQTT_BROKER = "5.196.78.28"  # Your MQTT server (Mosquitto broker)
 MQTT_PORT = 1883
 TOPIC_TEMP = "testnode1234567890/temp"
 TOPIC_HUMIDITY = "testnode1234567890/humidity"
-TOPIC_LIGHT = "testnode1234567890/light"
+TOPIC_LIGHT = "testnode1234567890/led"
 
 # Callback when the client connects to the MQTT broker
 def on_connect(client, userdata, flags, rc):
