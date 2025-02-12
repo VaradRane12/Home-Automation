@@ -1,10 +1,13 @@
 #include <ESP8266WiFi.h>
 #include <espnow.h>
+#include <DHT.h>
 
 // Pin Definitions
-#define LED_PIN 1  // ESP-01 GPIO2
-#define DHTPIN 2  
-#define DHTTYPE DHT11
+#define LED_PIN 1   // ESP-01 GPIO1
+#define DHTPIN 2    // ESP-01 GPIO2 (DHT11 Data pin)
+#define DHTTYPE DHT11  
+
+DHT dht(DHTPIN, DHTTYPE);
 
 typedef struct struct_message {
   float temperature;
@@ -35,37 +38,31 @@ void onDataRecv(uint8_t * mac, uint8_t *incomingData, uint8_t len) {
 
 void setup() {
   Serial.begin(115200);
-
-  // Initialize LED Pin
+  
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);  // LED off by default
 
-  // Set ESP-01 as a Wi-Fi Station
-  WiFi.mode(WIFI_STA);
+  dht.begin();  // Initialize DHT sensor
 
-  // Initialize ESP-NOW
+  WiFi.mode(WIFI_STA);
+  
   if (esp_now_init() != 0) {
     Serial.println("ESP-NOW Initialization Failed");
     return;
   }
 
-  // Set role as slave
   esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
-  
-  // Register receive callback
   esp_now_register_recv_cb(onDataRecv);
 }
 
 void loop() {
-  // Sensor data simulation (Replace with actual sensor readings)
-  sensorData.temperature = random(20, 30);
-  sensorData.humidity = random(40, 60);
-
-  // Send sensor data to NodeMCU
-  esp_now_send(gatewayMAC, (uint8_t*)&sensorData, sizeof(sensorData));
+  sensorData.temperature = dht.readTemperature();
+  sensorData.humidity = dht.readHumidity();
 
   Serial.print("Sent Temp: "); Serial.println(sensorData.temperature);
   Serial.print("Sent Humidity: "); Serial.println(sensorData.humidity);
 
-  delay(5000); // Send data every 5 seconds
+  esp_now_send(gatewayMAC, (uint8_t*)&sensorData, sizeof(sensorData));
+
+  delay(2000); // Send data every 5 seconds
 }
