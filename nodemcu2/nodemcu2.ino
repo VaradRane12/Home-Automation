@@ -2,15 +2,18 @@
 #include <espnow.h>
 #include <PubSubClient.h>
 
-// WiFi and MQTT Broker details
+// WiFi and MQTT Configuration
+const char* ssid = "Sarkar 1";
+const char* password = "asha1981";
 const char* mqtt_server = "5.196.78.28";
+
 WiFiClient espClient;
 PubSubClient client(espClient);
 
 // MAC Address of ESP-01 (Replace with actual MAC)
 uint8_t esp01MAC[] = {0xEC, 0xFA, 0xBC, 0x37, 0x31, 0xF0};
 
-// Structure for sending commands to ESP-01
+// Structures for communication
 typedef struct control_message {
   bool requestData;
   bool ledState;
@@ -24,15 +27,16 @@ typedef struct sensor_data {
 control_message command;
 sensor_data sensorData;
 
-// ESP-NOW Receive Callback (Handles received sensor data)
+// ESP-NOW Receive Callback (Handles sensor data)
 void onDataRecv(uint8_t * mac, uint8_t *incomingData, uint8_t len) {
+  Serial.print("here");
   memcpy(&sensorData, incomingData, sizeof(sensorData));
   Serial.print("Received Temp: "); Serial.println(sensorData.temperature);
   Serial.print("Received Humidity: "); Serial.println(sensorData.humidity);
 
-  // Publish to MQTT
-  client.publish("home/temperature", String(sensorData.temperature).c_str());
-  client.publish("home/humidity", String(sensorData.humidity).c_str());
+  // Publish sensor data to MQTT
+  client.publish("HomeAutomation981237419/temperature", String(sensorData.temperature).c_str());
+  client.publish("HomeAutomation981237419/humidity", String(sensorData.humidity).c_str());
 }
 
 // MQTT Callback (Handles messages from Flask)
@@ -62,26 +66,31 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void setup() {
   Serial.begin(115200);
   
-  WiFi.mode(WIFI_STA);
-  WiFi.begin("Sarkar 1", "asha1981");
+  // Connect to WiFi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("WiFi Connected!");
 
+  // Setup MQTT
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
-  
   while (!client.connected()) {
     Serial.print(".");
     client.connect("NodeMCU_Client");
     delay(500);
   }
+  Serial.println("MQTT Connected!");
+  client.subscribe("HomeAutomation981237419/request");
+  client.subscribe("HomeAutomation981237419/led");
 
-  client.subscribe("home/request");
-  client.subscribe("home/led");
-
+  // Setup ESP-NOW
   if (esp_now_init() != 0) {
     Serial.println("ESP-NOW Initialization Failed");
     return;
   }
-
   esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
   esp_now_register_recv_cb(onDataRecv);
 }

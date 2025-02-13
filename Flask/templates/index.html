@@ -5,6 +5,8 @@
 </head>
 <body>
     <h1>ESP-01 Control</h1>
+    <p>Temperature: {{ temperature }} °C</p>
+    <p>Humidity: {{ humidity }} %</p>
     <button onclick="fetch('/get_temp', {method: 'POST'})">Get Temperature</button>
     <button onclick="fetch('/led_on', {method: 'POST'})">Turn LED ON</button>
     <button onclick="fetch('/led_off', {method: 'POST'})">Turn LED OFF</button>
