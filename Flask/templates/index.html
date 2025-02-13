@@ -1,14 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>ESP Sensor Control</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Dashboard</title>
 </head>
 <body>
-    <h1>ESP-01 Control</h1>
-    <p>Temperature: {{ temperature }} °C</p>
-    <p>Humidity: {{ humidity }} %</p>
-    <button onclick="fetch('/get_temp', {method: 'POST'})">Get Temperature</button>
-    <button onclick="fetch('/led_on', {method: 'POST'})">Turn LED ON</button>
-    <button onclick="fetch('/led_off', {method: 'POST'})">Turn LED OFF</button>
+    <h1>Smart Home Dashboard</h1>
+
+    <h2>🌡 Temperature: {{ sensor_data.temperature }} °C</h2>
+    <h2>💧 Humidity: {{ sensor_data.humidity }} %</h2>
+    <h2>🚪 Door Status: <strong>{{ sensor_data.door_status }}</strong></h2>
+
+    <button onclick="toggleLED('on')">Turn LED Off</button>
+    <button onclick="toggleLED('off')">Turn LED On</button>
+
+    <script>
+        function toggleLED(state) {
+            fetch(`/led/${state}`);
+        }
+    </script>
 </body>
 </html>

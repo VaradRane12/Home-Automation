@@ -1,47 +1,56 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 import paho.mqtt.client as mqtt
 
 app = Flask(__name__)
-mqtt_client = mqtt.Client()
-mqtt_client.connect("5.196.78.28", 1883, 60)
 
-# Store last received data
-temperature = None
-humidity = None
+# MQTT Broker Configuration
+MQTT_BROKER = "5.196.78.28"
+MQTT_PORT = 1883
+MQTT_TOPICS = ["home/temperature", "home/humidity", "home/door_status"]
 
-# MQTT Callback Function
-def on_message(client, userdata, message):
-    global temperature, humidity
-    topic = message.topic
-    payload = message.payload.decode()
-    if topic == "HomeAutomation981237419/temperature":
-        temperature = payload
-    elif topic == "HomeAutomation981237419/humidity":
-        humidity = payload
+# Global Variables for Storing Data
+sensor_data = {
+    "temperature": "N/A",
+    "humidity": "N/A",
+    "door_status": "Unknown"
+}
 
-mqtt_client.on_message = on_message
-mqtt_client.subscribe("HomeAutomation981237419/temperature")
-mqtt_client.subscribe("HomeAutomation981237419/humidity")
-mqtt_client.loop_start()
+# MQTT Callback when a message is received
+def on_message(client, userdata, msg):
+    topic = msg.topic
+    payload = msg.payload.decode("utf-8")
+
+    if topic == "home/temperature":
+        sensor_data["temperature"] = payload
+    elif topic == "home/humidity":
+        sensor_data["humidity"] = payload
+    elif topic == "home/door_status":
+        sensor_data["door_status"] = payload
+
+    print(f"Received: {topic} → {payload}")
+
+# MQTT Setup
+client = mqtt.Client()
+client.on_message = on_message
+client.connect(MQTT_BROKER, MQTT_PORT, 60)
+
+# Subscribe to all topics
+for topic in MQTT_TOPICS:
+    client.subscribe(topic)
+
+client.loop_start()  # Start the MQTT loop in the background
 
 @app.route("/")
 def index():
-    return render_template("index.html", temperature=temperature, humidity=humidity)
+    return render_template("index.html", sensor_data=sensor_data)
 
-@app.route("/get_temp", methods=["POST"])
-def get_temp():
-    mqtt_client.publish("HomeAutomation981237419/request", "get_data")
-    return "Requested temperature data"
-
-@app.route("/led_on", methods=["POST"])
-def led_on():
-    mqtt_client.publish("HomeAutomation981237419/led", "led_on")
-    return "Turned LED ON"
-
-@app.route("/led_off", methods=["POST"])
-def led_off():
-    mqtt_client.publish("HomeAutomation981237419/led", "led_off")
-    return "Turned LED OFF"
+@app.route("/led/<state>")
+def control_led(state):
+    if state == "on":
+        client.publish("home/led", "ON")
+    else:
+        client.publish("home/led", "OFF")
+    return "OK"
 
 if __name__ == "__main__":
     app.run(debug=True)
